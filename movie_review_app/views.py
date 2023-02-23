@@ -9,6 +9,8 @@ from django.http import HttpResponse
 from django.views import View
 from django.http import JsonResponse
 
+from movie_review_app import models
+from models import *
 
 '''
 Basic processing class, all other processing views inherit from this class
@@ -232,11 +234,11 @@ class UsersView(BaseView):
         if module == 'page':
             return UsersView.getPageInfo(request)
         if module == 'info':
-            return UserView.getInfo(request)
+            return UsersView.getInfo(request)
         else:
             return BaseView.error()
 
-    def post(self,request, module, *args, **kwargs):
+    def post(request, module, *args, **kwargs):
         if module == 'add':
             return UsersView.addInfo(request)
         elif module == 'edit':
@@ -315,7 +317,7 @@ class UsersView(BaseView):
             query &= Q(age__icontains=age)
 
         # get paginated data
-        user_info = UserInfo.objects.filter(query)
+        user_info = Users.objects.filter(query)
         paginator = Paginator(user_info, page_size)
         page_data = paginator.get_page(page_index)
 
@@ -323,13 +325,13 @@ class UsersView(BaseView):
         data = []
         for user in page_data:
             data.append({
-                'id': users.id,
-                'numCoins':user.num_coins,
+                'id': user_info.id,
+                'numCoins':user_info.num_coins,
                 'numFollowers':user.num_followers,
-                'username': users.username,
-                'email': users.email,
-                'gender': users.gender,
-                'age': users.age,
+                'username': user_info.username,
+                'email': user_info.email,
+                'gender': user_info.gender,
+                'age': user_info.age,
                 'movie_name': user.movies.movie_name,
                 'release_time': user.movies.release_time,
                 'movie_intro': user.movies.movie_intro,
@@ -407,7 +409,7 @@ class AdminsView(BaseView):
         if module == 'add':
             return AdminsView.addInfo(request)
         elif module == 'edit':
-            return AdminsViewsView.editInfo(request)
+            return AdminsView.editInfo(request)
         elif module == 'del':
             return AdminsView.deleteInfo(request)
         else:
@@ -447,8 +449,8 @@ class AdminsView(BaseView):
                 'adminLoginTime': item.loginTime
             }
             resl.append(temp)
-        pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
-                                       paginator.page(pageIndex).paginator.num_pages,
+        pageData = BaseView.parsePage(int(page_index), int(page_size),
+                                       paginator.page(page_index).paginator.num_pages,
                                        paginator.count, resl)
 
         return BaseView.successData(pageData)
@@ -501,9 +503,9 @@ movies' information management
 class MoviesView(BaseView):
     def get(self, request, module, *args, **kwargs):
         if module == 'page':
-            return MovieView.getPageInfo(request)
+            return MoviesView.getPageInfo(request)
         elif module == 'info':
-            return MovieView.getInfo(request)
+            return MoviesView.getInfo(request)
         elif module == 'search':
             return MoviesView.searchInfo(request)
         else:
@@ -544,19 +546,19 @@ class MoviesView(BaseView):
     '''
     def getPageInfo(request):
 
-        loginUser = SysView.getLoginUser(request.GET.get('token'))
+        loginUser = SystemView.getLoginUser(request.GET.get('token'))
 
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
-        MovieName = request.GET.get('adminName')
-        ReviewsName = request.GET.get('moviesName')
+        adminName = request.GET.get('adminName')
+        moviesName = request.GET.get('moviesName')
         query = Q()
         if loginUser['type'] == 0:
             query = query & Q(admin__user__id=loginUser['id'])
         if BaseView.isExit(adminName):
             query = query & Q(admin__user__name__contains=adminName)
-        if BaseView.isExit(MovieName):
-            query = query & Q(name__contains=MovieName)
+        if BaseView.isExit(moviesName):
+            query = query & Q(name__contains=moviesName)
         data = models.Movies.objects.filter(query).order_by('-release_time')
         paginator = Paginator(data, pageSize)
         resl = []
@@ -613,16 +615,16 @@ class MoviesView(BaseView):
     '''
     add Movies' info
     '''
-    def addInfo(self):
+    def addInfo(request):
         loginUser = SystemView.getUserLogin(request.POST.get('token'))
         models.Movies.objects.create(
             admin=models.Admins.objects.filter(user__id=loginUser['id']).first(),
             movieName=request.POST.get('name'),
-            movieIntro=requests.POST.get('intro'),
+            movieIntro=request.POST.get('intro'),
             releaseTime=time.strftime("%Y-%m-%d", time.localtime()),
-            genre=requests.POST.get('genre'),
+            genre=request.POST.get('genre'),
             status=0,
-            producer=requests.POST.get('producer'),
+            producer=request.POST.get('producer'),
         )
         return BaseView.success()
     def editInfo(request):
@@ -707,11 +709,11 @@ class ReviewLogsView(BaseView):
         review = models.User.objects.filter(id=request.POST.get('movieId'))
         models.ReviewLogs.objects.create(
             user=models.User.objects.filter(user__id=loginUser['id']).first(),
-            movie=movie.first(),
+            movie=Movies.first(),
             review_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         )
-        movie.update(
-            commentedPerson=movie.first().commentedPerson + 1
+        Movies.update(
+            commentedPerson=Movies.first().commentedPerson + 1
 
         )
         return BaseView.success()
@@ -755,23 +757,21 @@ class FavoriateListsView(BaseView):
     
     '''
     def getPageInfo(request):
-        loginUser = SysView.getLoginUser(request.GET.get('token'))
+        loginUser = SystemView.getLoginUser(request.GET.get('token'))
 
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
-        studentName = request.GET.get('studentName')
-        projectName = request.GET.get('projectName')
+        username = request.GET.get('username')
 
         query = Q(movie__isnull=False);
         if loginUser['type'] == 0:
-            query = qruery & Q(movie__admin__user__id=loginUser['id'])
+            query = query & Q(movie__admin__user__id=loginUser['id'])
         elif loginUser['type'] == 1:
-            query = qruery & Q(user__id=loginUser['id'])
+            query = query & Q(user__id=loginUser['id'])
 
-        if BaseView.isExit(studentName):
-            query = qruery & Q(user__name__contains=userName)
-        if BaseView.isExit(projectName):
-            query = qruery & Q(movie__admin__name__contains=movieName)
+        if BaseView.isExit(username):
+            query = query & Q(user__name__contains=username)
+
 
         data = models.User.objects.filter(query)
 
