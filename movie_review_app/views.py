@@ -13,7 +13,7 @@ from django.http import JsonResponse
 '''
 Basic processing class, all other processing views inherit from this class
 '''
-class BaseView(Views):
+class BaseView(View):
     '''
     Checks whether the specified parameter exists,
     exists return True, not exists return False.
