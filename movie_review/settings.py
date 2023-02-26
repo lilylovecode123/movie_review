@@ -11,8 +11,6 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
-
-
 import pymysql
 pymysql.install_as_MySQLdb()
 
@@ -30,6 +28,8 @@ SECRET_KEY = 'django-insecure-42dqk&ys40l!n_pj)f7tl$w3*@+4hlddo0w8y@3y%=9f#67q-v
 DEBUG = True
 
 ALLOWED_HOSTS = []
+
+# 现在可以安全地导入并使用 settings.py 中的设置了
 
 
 # Application definition
