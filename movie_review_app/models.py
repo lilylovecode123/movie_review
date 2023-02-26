@@ -12,13 +12,9 @@ class Users(models.Model):
     gender = models.SmallIntegerField(choices=gender_choices, null=False)
     age = models.IntegerField(null=False)
     type = models.IntegerField(null=False)
+    # avatar = models.ImageField(upload_to='avatars/', null=True, blank=True) # add avatar for the user
     class Meta:
         db_table = 'users'
-
-
-
-
-
 
 #管理员信息
 class Admins(models.Model):
@@ -66,7 +62,7 @@ class ReviewLogs(models.Model):
         db_table = 'review_logs'
 
 
-#收藏清单
+
 class FavoriateLists(models.Model):
     id = models.AutoField(primary_key=True)
     collect_time = models.CharField(max_length=19, null=False)

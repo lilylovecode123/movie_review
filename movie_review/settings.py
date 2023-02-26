@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/3.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 import pymysql
 pymysql.install_as_MySQLdb()
 
@@ -42,7 +43,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'movie_review_app.apps.MovieReviewAppConfig'
+    # 'avatar'
 ]
+# AVATAR_DEFAULT_URL = ''
+# AVATAR_GRAVATAR_BACKUP = True
+# MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+# MEDIA_URL = '/media/'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -82,7 +89,7 @@ CORS_ALLOW_HEADERS = (
     'Pragma',
 )
 
-#缓存设置
+#cache settings
 CACHE = {
     'default':{
         'BACKEND':'django.core.cache.backends.locmem.LocMemCache',
@@ -116,11 +123,11 @@ WSGI_APPLICATION = 'movie_review.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql', #自动连接了MYSQL
-        'NAME': 'movie_review_web', #数据库名字
+        'ENGINE': 'django.db.backends.mysql', #conencted with mysql
+        'NAME': 'movie_review_web', #database name
         'USER': 'root',
         'PASSWORD': 'viva=xinyu',
-        'HOST': '127.0.0.1', #本机/localhost也行
+        'HOST': '127.0.0.1', #localhost
         'PORT': 3306,
     }
 }

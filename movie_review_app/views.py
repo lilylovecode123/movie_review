@@ -9,7 +9,9 @@ from django.http import HttpResponse
 from django.views import View
 from django.http import JsonResponse
 from movie_review_app import models
-# from .models import *
+from django.shortcuts import get_object_or_404
+from .models import *
+from datetime import datetime
 # from django.db import models
 # from .models import Users, User
 
@@ -167,53 +169,43 @@ class SystemView(BaseView):
             return SystemView.error("User input a wrong username.")
 
     '''
-    gain user login information
+    gain login user information
     '''
 
     def getLoginUser(token):
-        users = models.Users.objects.filter(id=cache.get(token)).first()
+        user_id = models.Users.objects.filter(id=cache.get(token)).first()
+        if user_id is None:
+            return "there is no user ID in cache"
+        user = models.Users.objects.filter(id=user_id).first()
+        if user is None:
+            return "there is no user ID in DB"
+        resl = {
+            'id': user.id,
+            'username': user.username,
+            'password': user.password,
+            'name': user.name,
+            'email': user.email,
+            'gender': user.gender,
+            'age': user.age,
+            'type': user.type
+        }
         # for users
-        if users is not None and users.type is not None and users.type == 1:
-            user = models.User.objects.filter(users__id=users.id).first()
-            if user.movie != None:
-                resl = {
-                    'id': users.id,
-                    'username': users.username,
-                    'password': users.password,
-                    'name': users.name,
-                    'email': users.email,
-                    'gender': users.gender,
-                    'age': users.age,
-                    'type': users.type,
-                    'isReview': True
-                }
-                return resl
+        if user.type == 1:
+            related_user = models.User.objects.filter(user__id=user.id).first()
+            if related_user is not None and related_user.movie is not None:
+                resl['isReview'] == True
             else:
-                resl = {
-                    'id': users.id,
-                    'username': users.username,
-                    'password': users.password,
-                    'name': users.name,
-                    'email': users.email,
-                    'gender': users.gender,
-                    'age': users.age,
-                    'type': users.type,
-                    'isReview': False
+                resl['isReview'] ==False
+        #for admins
+        elif user.type == 2:
+            pass
+        return resl
 
-                }
-        # for admin
-        if users is not None and users.type is not None and users.type == 2:
-            resl = {
-                'id': users.id,
-                'username': users.username,
-                'password': users.password,
-                'name': users.name,
-                'email': users.email,
-                'gender': users.gender,
-                'age': users.age,
-                'type': users.type,
-            }
-            return resl
+
+
+
+
+
 
     '''
     logout
@@ -792,26 +784,32 @@ class ReviewLogsView(BaseView):
     @transaction.atomic
     def addInfo(request):
         loginUser = SystemView.getLoginUser(request.POST.get('token'))
+        # print("pass1")
+        if not loginUser:
+            return BaseView.error('invalid token')
+        # query = Q(user_id=loginUser['id'], movie_id=request.POST.get('movie_id'))
         query = Q();
-        # query = query & Q(users__id=loginUser['id'])
-        query = query & Q(movie__id=request.POST.get('movieId'))
+        # print("built query")
+        query = query & Q(user__id=loginUser['id'])
+        # print("pass id")
+        query &= Q(movie__id=request.POST.get('movie_id'))
+        # print("pass2")
         if models.ReviewLogs.objects.filter(query).exists():
             return BaseView("The comment record is pending or passed and cannot be submitted again")
         else:
-            movie = models.Movies.objects.filter(id=request.POST.get('movieId'))
+            movie = models.Movies.objects.filter(id=request.POST.get('movieId')).first()
+            user = models.User.objects.filter(user_id=loginUser['id']).first()
+            if not movie or not user:
+                return BaseView.error('invalid ID or user ID')
             models.ReviewLogs.objects.create(
-                user=models.Users.objects.filter(user__id=loginUser['id']).first(),
-                movie=movie.first(),
+                user=user,
+                movie=movie,
                 review_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             )
-            ReviewLogsView.update(
-                commentedPerson=ReviewLogsView.first().commentedPerson + 1
-            )
+            review_log = models.ReviewLogs.objects.first()
+            review_log.commentedPerson += 1
+            review_log.save()
             return BaseView.success()
-
-
-
-
 
     def editInfo(request):
         models.ReviewLogs.objects. \
@@ -820,92 +818,17 @@ class ReviewLogsView(BaseView):
             ratings=request.POST.get('ratings')
         )
         return BaseView.success()
+    # Users confirm ReviewLogs
+    def confirmInfo(request, review_id):
+        token = models.ReviewLogs.objects.filter(id=request.POST.get('id'))
+        # find user through token, it returns 404 Http if the user is not exists in DB
+        user = get_object_or_404(User, id=token)
+        review = get_object_or_404(ReviewLogs, id=review_id, user=user)
+        #update reviewlog info in DB
+        review.is_checked = True
+        review.review_time = datetime.now()
+        review.save()
+        return JsonResponse(BaseView.success())
 
 
-'''
-favoriate list management
-'''
 
-
-class FavoriateListsView(BaseView):
-    def get(self, request, module, *args, **kwargs):
-        if module == 'page':
-            return FavoriateListsView.getPageInfo(request)
-        elif module == 'info':
-            return FavoriateListsView.getInfo(request)
-        else:
-            return BaseView.error()
-
-    def post(self, request, module, *args, **kwargs):
-        if module == 'add':
-            return FavoriateListsView.addInfo(request)
-        else:
-            return BaseView.error()
-
-    '''
-    gain related favoriate list info
-    '''
-
-    def getInfo(request):
-        favoriate = models.FavoriateLists.objects.filter(id=request.GET.get('id')).first()
-        resl = {
-            'id': favoriate.id,
-            'collectTime': favoriate.collectTime,
-        }
-        return BaseView.successData(resl)
-
-    '''
-    View favorite list by page
-    
-    '''
-
-    def getPageInfo(request):
-        loginUser = SystemView.getLoginUser(request.GET.get('token'))
-
-        pageIndex = request.GET.get('pageIndex', 1)
-        pageSize = request.GET.get('pageSize', 10)
-        username = request.GET.get('username')
-
-        query = Q(movie__isnull=False);
-        if loginUser['type'] == 0:
-            query = query & Q(movie__admin__user__id=loginUser['id'])
-        elif loginUser['type'] == 1:
-            query = query & Q(user__id=loginUser['id'])
-
-        if BaseView.isExit(username):
-            query = query & Q(user__name__contains=username)
-
-        data = models.User.objects.filter(query)
-
-        paginator = Paginator(data, pageSize)
-
-        resl = []
-        for item in list(paginator.page(pageIndex)):
-            temp = {
-                'userId': item.user.users.id,
-                'userName': item.user.users.name,
-                'userNumOfCoins': item.user.num_coins,
-                'userNumOfFollowers': item.user.num_followers,
-                'movieId': item.movies.id,
-                'movieName': item.movies.movie_name,
-                'adminName': item.admins.users.name,
-                'adminIntro': item.admins.intro,
-                'adminLoginTime': item.admins.login_time,
-            }
-            resl.append(temp)
-
-        pageData = BaseView.parasePage(int(pageIndex), int(pageSize),
-                                       paginator.page(pageIndex).paginator.num_pages,
-                                       paginator.count, resl)
-
-        return BaseView.successData(pageData)
-
-    '''
-    add favoriate list info
-    '''
-
-    def addInfo(request):
-        models.FavoriateLists.objects.create(
-            collectTime=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()),
-        )
-        return BaseView.success()
