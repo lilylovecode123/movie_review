@@ -12,6 +12,7 @@ class Users(models.Model):
     gender = models.SmallIntegerField(choices=gender_choices, null=False)
     age = models.IntegerField(null=False)
     type = models.IntegerField(null=False)
+    avatar = models.TextField(max_length=255, null=True,default='media/christopher-campbell-rDEOVtE7vOs-unsplash.jpg')
     # avatar = models.ImageField(upload_to='avatars/', null=True, blank=True) # add avatar for the user
     class Meta:
         db_table = 'users'
@@ -33,8 +34,8 @@ class Movies(models.Model):
     genre = models.CharField(max_length=20, null=False)
     producer = models.CharField(max_length=10, null=False)
     status = models.BooleanField(default=True, null=False)
-    admin = models.ForeignKey(Admins, on_delete=models.CASCADE, db_column='admin_id', default='admin1')
-
+    admin = models.ForeignKey(Admins, on_delete=models.CASCADE, db_column='admin_id', default='1')
+    image = models.TextField(max_length=255, null=True,default='media/christopher-campbell-rDEOVtE7vOs-unsplash.jpg')
     class Meta:
         db_table = 'movies'
 

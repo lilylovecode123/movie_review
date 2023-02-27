@@ -12,13 +12,10 @@ from movie_review_app import models
 from django.shortcuts import get_object_or_404
 from .models import *
 from datetime import datetime
-# from django.db import models
-# from .models import Users, User
+from movie_review_app import models
+from django.conf import settings
+from django.core.files.storage import FileSystemStorage
 
-
-
-
-# from .models import Users,Admins,Movies,User,ReviewLogs,FavoriateLists
 
 '''
 Basic processing class, all other processing views inherit from this class
@@ -161,7 +158,7 @@ class SystemView(BaseView):
                     'token': str(token)
                 }
 
-                cache.set(token, user.id, 60 * 60 * 60 * 3)
+                cache.set('token', user.id, 60 * 60 * 60 * 3)
                 return SystemView.successData(resl)
             else:
                 return SystemView.error("User inputs a wrong password.")
@@ -173,7 +170,8 @@ class SystemView(BaseView):
     '''
 
     def getLoginUser(token):
-        user_id = models.Users.objects.filter(id=cache.get(token)).first()
+        print(cache.get('token'))
+        user_id = models.Users.objects.filter(id=cache.get('token')).first()
         if user_id is None:
             return "there is no user ID in cache"
         user = models.Users.objects.filter(id=user_id).first()
@@ -195,17 +193,11 @@ class SystemView(BaseView):
             if related_user is not None and related_user.movie is not None:
                 resl['isReview'] == True
             else:
-                resl['isReview'] ==False
-        #for admins
+                resl['isReview'] == False
+        # for admins
         elif user.type == 2:
             pass
         return resl
-
-
-
-
-
-
 
     '''
     logout
@@ -280,13 +272,11 @@ class UsersView(BaseView):
         else:
             return BaseView.error()
 
-    def post(self,  request, module, *args, **kwargs):
+    def post(self, request, module, *args, **kwargs):
         if module == 'add':
             return UsersView.addInfo(request)
         elif module == 'edit':
             return UsersView.editInfo(request)
-        # elif module == 'confirm':
-        #     return UsersView.confirmInfo(request)
         elif module == 'delete':
             return UsersView.delInfo(request)
         else:
@@ -369,7 +359,6 @@ class UsersView(BaseView):
         paginator = Paginator(user_info, page_size)
         page_data = paginator.get_page(page_index)
 
-
         # format data for response
         data = []
         for user in page_data:
@@ -384,7 +373,7 @@ class UsersView(BaseView):
                     'gender': user.gender,
                     'age': user.age,
                     'movie_name': infoData.movie.movie_name,
-                    'release_time':infoData.movie.release_time,
+                    'release_time': infoData.movie.release_time,
                     'movie_intro': infoData.movie.movie_intro,
                     'movieId': infoData.movie.id,
                     'genre': infoData.movie.genre,
@@ -392,15 +381,15 @@ class UsersView(BaseView):
                     'isReview': True
                 })
 
-            response_data = {
+            # response_data = 
+
+        return BaseView.successData({
                 'page_index': page_data.number,
                 'page_size': page_size,
                 'total_records': paginator.count,
                 'total_pages': paginator.num_pages,
                 'data': data,
-            }
-
-        return JsonResponse(response_data)
+            })
 
     '''
     add user's information 
@@ -445,7 +434,7 @@ class UsersView(BaseView):
     def delInfo(request):
         print(request.POST.get('id'))
         # if (models.Movies.objects.filter(users__user__id=request.POST.get('id')).exists()):
-            # return BaseView.warning('There are associated relationships that cannot be deleted')
+        # return BaseView.warning('There are associated relationships that cannot be deleted')
         models.User.objects.filter(user__id=request.POST.get('id')).delete()
         models.Users.objects.filter(id=request.POST.get('id')).delete()
         return BaseView.success()
@@ -500,7 +489,7 @@ class AdminsView(BaseView):
         for item in list(paginator.page(page_index)):
             temp = {
                 'id': item.user.id,
-                'userName':item.user.username,
+                'userName': item.user.username,
                 'passWord': item.user.password,
                 'admin'
                 'adminIntro': item.intro,
@@ -570,8 +559,8 @@ class MoviesView(BaseView):
     def get(self, request, module, *args, **kwargs):
         if module == 'page':
             return MoviesView.getPageInfo(request)
-        # elif module == 'info':
-        #     return MoviesView.getInfo(request)
+        elif module == 'info':
+            return MoviesView.getInfo(request)
         elif module == 'search':
             return MoviesView.searchInfo(request)
         else:
@@ -579,11 +568,11 @@ class MoviesView(BaseView):
 
     def post(self, request, module, *args, **kwargs):
         if module == 'add':
-            return AdminsView.addInfo(request)
+            return MoviesView.addInfo(request)
         elif module == 'edit':
-            return AdminsView.editInfo(request)
+            return MoviesView.editInfo(request)
         elif module == 'del':
-            return AdminsView.deleteInfo(request)
+            return MoviesView.deleteInfo(request)
         else:
             return BaseView.error()
 
@@ -591,24 +580,26 @@ class MoviesView(BaseView):
     gain movie info
     '''
 
-    # def getInfo(request):
-    #     movie_data = models.Movies.objects.filter(id=request.GET.get('id')).first()
-    #     resl = {
-    #                 'id': movie_data.id,
-    #                 'movie_name': movie_data.name,
-    #                 'movie_intro': movie_data.intro,
-    #                 'release_time': movie_data.release_time,
-    #                 'genre': movie_data.genre,
-    #                 'status': movie_data.status,
-    #                 'producer': movie_data.producer,
-    #                 'adminName': movie_data.admin.users.name,
-    #                 'adminGender': movie_data.admin.users.gender,
-    #                 'adminAge': movie_data.admin.users.age,
-    #                 'adminEmail': movie_data.admin.users.email,
-    #                 'adminIntro': movie_data.admins.intro,
-    #                 'adminLoginTime': movie_data.admins.login_time
-    #             }
-    #     return BaseView.successData(resl)
+    def getInfo(request):
+        movie_data = models.Movies.objects.filter(id=request.GET.get('id')).first()
+        print(movie_data)
+        resl = {
+            'id': movie_data.id,
+            'movie_name': movie_data.movie_name,
+            'movie_intro': movie_data.movie_intro,
+            'release_time': movie_data.release_time,
+            'genre': movie_data.genre,
+            'status': movie_data.status,
+            'producer': movie_data.producer,
+            'adminName': movie_data.admin.user.name,
+            'adminGender': movie_data.admin.user.gender,
+            'adminAge': movie_data.admin.user.age,
+            'adminEmail': movie_data.admin.user.email,
+            'adminIntro': movie_data.admin.intro,
+            'adminLoginTime': movie_data.admin.login_time
+        }
+        return BaseView.successData(resl)
+
 
     '''
     Viewing movie information by pagination
@@ -648,8 +639,8 @@ class MoviesView(BaseView):
             }
             resl.append(temp)
         pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
-                                       paginator.page(pageIndex).paginator.num_pages,
-                                       paginator.count, resl)
+                                      paginator.page(pageIndex).paginator.num_pages,
+                                      paginator.count, resl)
 
         return BaseView.successData(pageData)
 
@@ -684,18 +675,17 @@ class MoviesView(BaseView):
     add Movies' info
     '''
 
-    # def addInfo(request):
-    #     loginUser = SystemView.getUserLogin(request.POST.get('token'))
-    #     models.Movies.objects.create(
-    #         admin=models.Admins.objects.filter(user__id=loginUser['id']).first(),
-    #         movie_name=request.POST.get('movie_name'),
-    #         movie_intro=request.POST.get('movie_intro'),
-    #         release_time=time.strftime("%Y-%m-%d", time.localtime()),
-    #         genre=request.POST.get('genre'),
-    #         status=0,
-    #         producer=request.POST.get('producer'),
-    #     )
-    #     return BaseView.success()
+    def addInfo(request):
+        models.Movies.objects.create(
+            admin_id=cache.get('token'),
+            movie_name=request.POST.get('movie_name'),
+            movie_intro=request.POST.get('movie_intro'),
+            release_time=time.strftime("%Y-%m-%d", time.localtime()),
+            genre=request.POST.get('genre'),
+            status=0,
+            producer=request.POST.get('producer'),
+        )
+        return BaseView.success()
 
     def editInfo(request):
         models.Movies.objects. \
@@ -742,7 +732,7 @@ class ReviewLogsView(BaseView):
         loginUser = SystemView.getLoginUser(request.GET.get('token'))
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
-        username=request.GET.get('username')
+        username = request.GET.get('username')
         movie_name = request.GET.get('movie_name')
         query = Q()
         if loginUser is not None and loginUser['type'] == 0:
@@ -772,8 +762,8 @@ class ReviewLogsView(BaseView):
             }
             resl.append(temp)
         pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
-                                       paginator.page(pageIndex).paginator.num_pages,
-                                       paginator.count, resl)
+                                      paginator.page(pageIndex).paginator.num_pages,
+                                      paginator.count, resl)
 
         return BaseView.successData(pageData)
 
@@ -783,33 +773,22 @@ class ReviewLogsView(BaseView):
 
     @transaction.atomic
     def addInfo(request):
-        loginUser = SystemView.getLoginUser(request.POST.get('token'))
-        # print("pass1")
+        loginUser = cache.get('token')
         if not loginUser:
             return BaseView.error('invalid token')
-        # query = Q(user_id=loginUser['id'], movie_id=request.POST.get('movie_id'))
-        query = Q();
-        # print("built query")
-        query = query & Q(user__id=loginUser['id'])
-        # print("pass id")
-        query &= Q(movie__id=request.POST.get('movie_id'))
-        # print("pass2")
-        if models.ReviewLogs.objects.filter(query).exists():
-            return BaseView("The comment record is pending or passed and cannot be submitted again")
-        else:
-            movie = models.Movies.objects.filter(id=request.POST.get('movieId')).first()
-            user = models.User.objects.filter(user_id=loginUser['id']).first()
-            if not movie or not user:
-                return BaseView.error('invalid ID or user ID')
-            models.ReviewLogs.objects.create(
-                user=user,
-                movie=movie,
-                review_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
-            )
-            review_log = models.ReviewLogs.objects.first()
-            review_log.commentedPerson += 1
-            review_log.save()
-            return BaseView.success()
+        movie = models.Movies.objects.filter(id=request.POST.get('movie_id')).first()
+        user = models.User.objects.filter(user_id=loginUser).first()
+        if not movie or not user:
+            return BaseView.error('invalid ID or user ID')
+        models.ReviewLogs.objects.create(
+            user=user,
+            comments=request.POST.get('comments'),
+            ratings=request.POST.get('ratings'),
+            movie=movie,
+            commentedPerson = 1,
+            review_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+        )
+        return BaseView.success()
 
     def editInfo(request):
         models.ReviewLogs.objects. \
@@ -818,17 +797,45 @@ class ReviewLogsView(BaseView):
             ratings=request.POST.get('ratings')
         )
         return BaseView.success()
-    # Users confirm ReviewLogs
-    def confirmInfo(request, review_id):
-        token = models.ReviewLogs.objects.filter(id=request.POST.get('id'))
-        # find user through token, it returns 404 Http if the user is not exists in DB
-        user = get_object_or_404(User, id=token)
-        review = get_object_or_404(ReviewLogs, id=review_id, user=user)
-        #update reviewlog info in DB
-        review.is_checked = True
-        review.review_time = datetime.now()
-        review.save()
-        return JsonResponse(BaseView.success())
 
 
 
+class AvatarView(BaseView):
+    # def post(self, request, *args, **kwargs):
+    def post(self, request, module, *args, **kwargs):
+        if module == 'avatar':
+            return AvatarView.upload(request)
+        elif module == 'movie':
+            return AvatarView.movie(request)
+        else:
+            return BaseView.error()
+    def upload(request):    
+        print(request.FILES.get('avatar'))
+        avatar = request.FILES.get('avatar')
+        fss = FileSystemStorage()
+        file = fss.save(avatar.name, avatar)
+        print(file)
+        file_url = fss.url(file)
+        print(file_url)
+        # save_path = '%s/avatar/%s'%(settings.MEDIA_ROOT,avatar.name)
+        # with open (save_path,'wb') as f:
+        #     for content in avatar.chunks:
+        #         f.write(content)
+        # print(avatar.name)
+        return BaseView.successData({'file_url':file_url})
+    def movie(request):    
+        print(request.FILES.get('avatar'))
+        movie = request.FILES.get('movie')
+        fss = FileSystemStorage()
+        file = fss.save(movie.name, movie)
+        print(file)
+        file_url = fss.url(file)
+        print(file_url)
+        # save_path = '%s/avatar/%s'%(settings.MEDIA_ROOT,avatar.name)
+        # with open (save_path,'wb') as f:
+        #     for content in avatar.chunks:
+        #         f.write(content)
+        # print(avatar.name)
+        return BaseView.successData({'file_url':file_url})
+        # file_serializer = FileSerializer(data = request.data)
+       
