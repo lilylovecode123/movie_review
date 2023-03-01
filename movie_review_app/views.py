@@ -410,7 +410,9 @@ class UsersView(BaseView):
         models.User.objects.create(
             user=user,
             num_coins=request.POST.get('num_coins'),
-            num_followers=request.POST.get('num_followers')
+            num_followers=request.POST.get('num_followers'),
+            movie_id=request.POST.get('movie_id'),
+
 
         )
         return BaseView.success()
@@ -470,19 +472,19 @@ class AdminsView(BaseView):
         page_index = request.GET.get('page_index', 1)
         page_size = request.GET.get('page_size', 10)
 
-        adminName = request.GET.get('adminName')
-        adminIntro = request.GET.get('adminIntro')
-        adminLoginTime = request.GET.get('adminLoginTime')
+        adminId = request.GET.get('adminId')
+        # adminIntro = request.GET.get('adminIntro')
+        # adminLoginTime = request.GET.get('adminLoginTime')
 
-        query = Q()
+        # query = Q()
 
-        if BaseView.isExist(adminName):
-            query &= Q(user__name__icontains=adminName)
-        if BaseView.isExist(adminIntro):
-            query &= Q(intro__icontains=adminIntro)
-        if BaseView.isExist(adminLoginTime):
-            query &= Q(login_time__icontains=adminLoginTime)
-        data = models.Admins.objects.filter(query)
+        # if BaseView.isExist(adminId):
+        #     query &= Q(id__icontains=id)
+        # if BaseView.isExist(adminIntro):
+        #     query &= Q(intro__icontains=adminIntro)
+        # if BaseView.isExist(adminLoginTime):
+        #     query &= Q(login_time__icontains=adminLoginTime)
+        data = models.Admins.objects.filter(user_id=adminId)
 
         paginator = Paginator(data, page_size)
         resl = []
@@ -606,14 +608,16 @@ class MoviesView(BaseView):
     '''
 
     def getPageInfo(request):
-        loginUser = SystemView.getLoginUser(request.GET.get('token'))
+        # loginUser = SystemView.getLoginUser(request.GEssT.get('token'))
+        loginUser = models.Users.objects.filter(id=cache.get('token')).first()
+    
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
         adminName = request.GET.get('adminName')
         moviesName = request.GET.get('moviesName')
         query = Q()
-        if loginUser is not None and loginUser['type'] == 0:
-            query = query & Q(admin__user__id=loginUser['id'])
+        if loginUser is not None and loginUser.type == 0:
+            query = query & Q(admin__user__id=loginUser.id)
         if BaseView.isExist(adminName):
             query = query & Q(admin__user__name__contains=adminName)
         if BaseView.isExist(moviesName):
@@ -699,7 +703,7 @@ class MoviesView(BaseView):
         return BaseView.success()
 
     def deleteInfo(request):
-        if (models.Movies.objects.filter(movie__admin__id=request.POST.get('id')).exists()):
+        if (models.Movies.objects.filter(admin__user__id=cache.get('token')).exists()):
             return BaseView.warning('There are associated relationships that cannot be deleted')
         models.Movies.objects.filter(id=request.POST.get('id')).delete()
         return BaseView.success()
@@ -729,20 +733,25 @@ class ReviewLogsView(BaseView):
     '''
 
     def getPageInfo(request):
-        loginUser = SystemView.getLoginUser(request.GET.get('token'))
+        # loginUser = SystemView.getLoginUser(request.GET.get('token'))
+        loginUser = models.Users.objects.filter(id=cache.get('token')).first()
+        print(cache.get('token'))
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
         username = request.GET.get('username')
         movie_name = request.GET.get('movie_name')
         query = Q()
-        if loginUser is not None and loginUser['type'] == 0:
-            query = query & Q(movie__admin__user__id=loginUser['id'])
-        if loginUser is not None and loginUser['type'] == 1:
-            query = query & Q(user__user__id=loginUser['id'])
+        if loginUser is not None and loginUser.type == 0:
+            query = query & Q(movie__admin__user__id=loginUser.id)
+        if loginUser is not None and loginUser.type == 1:
+            query = query & Q(user__user__id=loginUser.id)
         if BaseView.isExist(username):
             query = query & Q(user__user__name__contains=username)
         if BaseView.isExist(movie_name):
-            query = query & Q(movie__name__contains=movie_name)
+            movie = models.Movies.objects.filter(movie_name=movie_name).first()
+            # print(movie.id)
+            query = query & Q(movie__id__contains=movie.id)
+        # print(query)
         data = models.ReviewLogs.objects.filter(query).order_by("-review_time")
         paginator = Paginator(data, pageSize)
         resl = []
