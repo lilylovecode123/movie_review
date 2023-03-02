@@ -802,7 +802,8 @@ class ReviewLogsView(BaseView):
             temp = {
                 'reviewTime': item.review_time,
                 'comments': item.comments,
-                'ratings': item.ratings
+                'ratings': item.ratings,
+                'username': item.user.user.username
             }
             resl.append(temp)
         pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
