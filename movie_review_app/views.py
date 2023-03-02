@@ -7,6 +7,7 @@ from django.db import transaction
 from django.db.models import Q
 from django.http import HttpResponse
 from django.views import View
+from django.db.models import Avg
 from django.http import JsonResponse
 from movie_review_app import models
 from django.shortcuts import get_object_or_404
@@ -150,12 +151,15 @@ class SystemView(BaseView):
         username = request.POST.get('username')
         password = request.POST.get('password')
         user = models.Users.objects.filter(username=username)
+        user_id = models.Users.objects.filter(id=cache.get('token')).first()
         if (user.exists()):
             user = user.first()
             if user.password == password:
                 token = uuid.uuid4()
                 resl = {
-                    'token': str(token)
+                    'token': str(token),
+                    'id': user.id,
+
                 }
 
                 cache.set('token', user.id, 60 * 60 * 60 * 3)
@@ -171,7 +175,8 @@ class SystemView(BaseView):
 
     def getLoginUser(token):
         print(cache.get('token'))
-        user_id = models.Users.objects.filter(id=cache.get('token')).first()
+        # user_id = models.Users.objects.filter(id=cache.get('token')).first()
+        user_id = cache.get('token')
         if user_id is None:
             return "there is no user ID in cache"
         user = models.Users.objects.filter(id=user_id).first()
@@ -732,39 +737,69 @@ class ReviewLogsView(BaseView):
     View movie review records by pageination
     '''
 
+    # def getPageInfo(request):
+    #     loginUser = SystemView.getLoginUser(request.GET.get('token'))
+    #     loginUser = models.Users.objects.filter(id=cache.get('token')).first()
+    #     print(cache.get('token'))
+    #     pageIndex = request.GET.get('pageIndex', 1)
+    #     pageSize = request.GET.get('pageSize', 10)
+    #     username = request.GET.get('username')
+    #     movie_name = request.GET.get('movie_name')
+    #     query = Q()
+    #     if loginUser is not None and loginUser.type == 0:
+    #         query = query & Q(movie__admin__user__id=loginUser.id)
+    #     if loginUser is not None and loginUser.type == 1:
+    #         query = query & Q(user__user__id=loginUser.id)
+    #     if BaseView.isExist(username):
+    #         query = query & Q(user__user__name__contains=username)
+    #     if BaseView.isExist(movie_name):
+    #         movie = models.Movies.objects.filter(movie_name=movie_name).first()
+    #         query = query & Q(movie__id__contains=movie.id)
+    #         # print(movie.id)
+    #         # query = query & Q(movie__movie__name=movie_name)
+    #     # print(query)
+    #     data = models.ReviewLogs.objects.filter(query).order_by("-review_time")
+    #     paginator = Paginator(data, pageSize)
+    #     resl = []
+    #     for item in list(paginator.page(pageIndex)):
+    #         temp = {
+    #             'id': item.id,
+    #             'num_coins': item.user.num_coins,
+    #             'num_followers': item.user.num_followers,
+    #             'movieId': item.user.movie.id,
+    #             'movieName': item.user.movie.movie_name,
+    #             'adminName': item.user.user.name,
+    #             'adminIntro': item.movie.admin.intro,
+    #             'adminLoginTime': item.movie.admin.login_time,
+    #             'reviewTime': item.review_time,
+    #             'comments': item.comments,
+    #             'ratings': item.ratings
+    #         }
+    #         resl.append(temp)
+    #     pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
+    #                                   paginator.page(pageIndex).paginator.num_pages,
+    #                                   paginator.count, resl)
+    #
+    #     return BaseView.successData(pageData)
     def getPageInfo(request):
-        # loginUser = SystemView.getLoginUser(request.GET.get('token'))
-        loginUser = models.Users.objects.filter(id=cache.get('token')).first()
-        print(cache.get('token'))
-        pageIndex = request.GET.get('pageIndex', 1)
-        pageSize = request.GET.get('pageSize', 10)
-        username = request.GET.get('username')
         movie_name = request.GET.get('movie_name')
-        query = Q()
-        if loginUser is not None and loginUser.type == 0:
-            query = query & Q(movie__admin__user__id=loginUser.id)
-        if loginUser is not None and loginUser.type == 1:
-            query = query & Q(user__user__id=loginUser.id)
-        if BaseView.isExist(username):
-            query = query & Q(user__user__name__contains=username)
         if BaseView.isExist(movie_name):
             movie = models.Movies.objects.filter(movie_name=movie_name).first()
-            # print(movie.id)
-            query = query & Q(movie__id__contains=movie.id)
-        # print(query)
-        data = models.ReviewLogs.objects.filter(query).order_by("-review_time")
+            if movie is not None:
+                data = models.ReviewLogs.objects.filter(movie_id=movie.id).order_by('-review_time')
+                avg_ratings = data.aggregate(Avg('ratings'))['ratings__avg']
+            else:
+                data = []
+                avg_ratings = None
+        else:
+            data = models.ReviewLogs.objects.none()
+            avg_ratings = None
+        pageIndex = request.GET.get('pageIndex', 1)
+        pageSize = request.GET.get('pageSize', 10)
         paginator = Paginator(data, pageSize)
         resl = []
         for item in list(paginator.page(pageIndex)):
             temp = {
-                'id': item.id,
-                'num_coins': item.user.num_coins,
-                'num_followers': item.user.num_followers,
-                'movieId': item.user.movie.id,
-                'movieName': item.user.movie.movie_name,
-                'adminName': item.user.user.name,
-                'adminIntro': item.movie.admin.intro,
-                'adminLoginTime': item.movie.admin.login_time,
                 'reviewTime': item.review_time,
                 'comments': item.comments,
                 'ratings': item.ratings
@@ -773,8 +808,13 @@ class ReviewLogsView(BaseView):
         pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
                                       paginator.page(pageIndex).paginator.num_pages,
                                       paginator.count, resl)
+        response_data = {
+            'pageData': pageData,
+            'avgRatings': avg_ratings
+        }
+        return BaseView.successData(response_data)
 
-        return BaseView.successData(pageData)
+
 
     '''
     add review logs
