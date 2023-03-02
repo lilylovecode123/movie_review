@@ -570,6 +570,8 @@ class MoviesView(BaseView):
             return MoviesView.getInfo(request)
         elif module == 'search':
             return MoviesView.searchInfo(request)
+        elif module == 'newest':
+            return MoviesView.newestInfo(request)
         else:
             return BaseView.error()
 
@@ -677,6 +679,39 @@ class MoviesView(BaseView):
                 'adminIntro': movie.admin.intro,
                 'adminLoginTime': movie.admin.login_time
             }
+            resl.append(temp)
+        return BaseView.successData(resl)
+
+    '''
+        get the newest movies' info 
+    '''
+    def newestInfo(request):
+        params = request.GET.get('params')
+        if params == 'release_time':
+            movies = models.Movies.objects.all().order_by('-release_time')
+        elif params == 'ratings':
+            movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-avg_rating')
+        else:
+            return BaseView.error("Invalid params.")
+        resl = []
+        for movie in movies:
+            temp = {
+                'id': movie.id,
+                'movie_name': movie.movie_name,
+                'movie_intro': movie.movie_intro,
+                'release_time': movie.release_time,
+                'genre': movie.genre,
+                'producer': movie.producer,
+                'status': movie.status,
+                'adminName': movie.admin.user.name,
+                'adminGender': movie.admin.user.gender,
+                'adminEmail': movie.admin.user.email,
+                'adminAge': movie.admin.user.age,
+                'adminIntro': movie.admin.intro,
+                'adminLoginTime': movie.admin.login_time
+            }
+            if params == 'avg_rating':
+                temp['avg_rating'] = movie.avg_rating
             resl.append(temp)
         return BaseView.successData(resl)
 
