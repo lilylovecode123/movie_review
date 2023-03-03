@@ -17,7 +17,6 @@ from movie_review_app import models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
 
-
 '''
 Basic processing class, all other processing views inherit from this class
 '''
@@ -144,7 +143,7 @@ class SystemView(BaseView):
 
     '''
     user login
-    
+
     '''
 
     def login(request):
@@ -230,7 +229,7 @@ class SystemView(BaseView):
     '''
 
     def getSessionInfo(request):
-        loginUser = SystemView.getUserLogin(request.GET.get('token'))
+        loginUser = SystemView.getLoginUser(request.GET.get('token'))
         return BaseView.successData(loginUser)
 
     '''
@@ -386,15 +385,15 @@ class UsersView(BaseView):
                     'isReview': True
                 })
 
-            # response_data = 
+            # response_data =
 
         return BaseView.successData({
-                'page_index': page_data.number,
-                'page_size': page_size,
-                'total_records': paginator.count,
-                'total_pages': paginator.num_pages,
-                'data': data,
-            })
+            'page_index': page_data.number,
+            'page_size': page_size,
+            'total_records': paginator.count,
+            'total_pages': paginator.num_pages,
+            'data': data,
+        })
 
     '''
     add user's information 
@@ -417,7 +416,6 @@ class UsersView(BaseView):
             num_coins=request.POST.get('num_coins'),
             num_followers=request.POST.get('num_followers'),
             movie_id=request.POST.get('movie_id'),
-
 
         )
         return BaseView.success()
@@ -568,6 +566,8 @@ class MoviesView(BaseView):
             return MoviesView.getPageInfo(request)
         elif module == 'info':
             return MoviesView.getInfo(request)
+        elif module == 'contain':
+            return MoviesView.searchByContainsWords(request)
         elif module == 'search':
             return MoviesView.searchInfo(request)
         elif module == 'newest':
@@ -609,7 +609,6 @@ class MoviesView(BaseView):
         }
         return BaseView.successData(resl)
 
-
     '''
     Viewing movie information by pagination
     '''
@@ -617,7 +616,7 @@ class MoviesView(BaseView):
     def getPageInfo(request):
         # loginUser = SystemView.getLoginUser(request.GEssT.get('token'))
         loginUser = models.Users.objects.filter(id=cache.get('token')).first()
-    
+
         pageIndex = request.GET.get('pageIndex', 1)
         pageSize = request.GET.get('pageSize', 10)
         adminName = request.GET.get('adminName')
@@ -658,6 +657,28 @@ class MoviesView(BaseView):
     '''
     search movies' info according to genre
     '''
+    def searchByContainsWords(request):
+        contain = request.GET.get('contain')
+        movies = models.Movies.objects.filter(movie_name__icontains=contain)
+        data = []
+        for movie in movies:
+            temp = {
+                'id': movie.id,
+                'movie_name': movie.movie_name,
+                'movie_intro': movie.movie_intro,
+                'release_time': movie.release_time,
+                'genre': movie.genre,
+                'producer': movie.producer,
+                'status': movie.status,
+                'adminName': movie.admin.user.name,
+                'adminGender': movie.admin.user.gender,
+                'adminEmail': movie.admin.user.email,
+                'adminAge': movie.admin.user.age,
+                'adminIntro': movie.admin.intro,
+                'adminLoginTime': movie.admin.login_time
+            }
+            data.append(temp)
+        return BaseView.successData(data)
 
     def searchInfo(request):
         genre = request.GET.get('genre')
@@ -817,9 +838,9 @@ class ReviewLogsView(BaseView):
     #
     #     return BaseView.successData(pageData)
     def getPageInfo(request):
-        movie_name = request.GET.get('movie_name')
-        if BaseView.isExist(movie_name):
-            movie = models.Movies.objects.filter(movie_name=movie_name).first()
+        id = request.GET.get('id')
+        if BaseView.isExist(id):
+            movie = models.Movies.objects.filter(id=id).first()
             if movie is not None:
                 data = models.ReviewLogs.objects.filter(movie_id=movie.id).order_by('-review_time')
                 avg_ratings = data.aggregate(Avg('ratings'))['ratings__avg']
@@ -850,8 +871,6 @@ class ReviewLogsView(BaseView):
         }
         return BaseView.successData(response_data)
 
-
-
     '''
     add review logs
     '''
@@ -870,7 +889,7 @@ class ReviewLogsView(BaseView):
             comments=request.POST.get('comments'),
             ratings=request.POST.get('ratings'),
             movie=movie,
-            commentedPerson = 1,
+            commentedPerson=1,
             review_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
         )
         return BaseView.success()
@@ -884,7 +903,6 @@ class ReviewLogsView(BaseView):
         return BaseView.success()
 
 
-
 class AvatarView(BaseView):
     # def post(self, request, *args, **kwargs):
     def post(self, request, module, *args, **kwargs):
@@ -894,7 +912,8 @@ class AvatarView(BaseView):
             return AvatarView.movie(request)
         else:
             return BaseView.error()
-    def upload(request):    
+
+    def upload(request):
         print(request.FILES.get('avatar'))
         avatar = request.FILES.get('avatar')
         fss = FileSystemStorage()
@@ -907,8 +926,9 @@ class AvatarView(BaseView):
         #     for content in avatar.chunks:
         #         f.write(content)
         # print(avatar.name)
-        return BaseView.successData({'file_url':file_url})
-    def movie(request):    
+        return BaseView.successData({'file_url': file_url})
+
+    def movie(request):
         print(request.FILES.get('avatar'))
         movie = request.FILES.get('movie')
         fss = FileSystemStorage()
@@ -921,6 +941,5 @@ class AvatarView(BaseView):
         #     for content in avatar.chunks:
         #         f.write(content)
         # print(avatar.name)
-        return BaseView.successData({'file_url':file_url})
+        return BaseView.successData({'file_url': file_url})
         # file_serializer = FileSerializer(data = request.data)
-       
