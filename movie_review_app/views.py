@@ -16,6 +16,7 @@ from datetime import datetime
 from movie_review_app import models
 from django.conf import settings
 from django.core.files.storage import FileSystemStorage
+from django.core import serializers
 
 
 '''
@@ -367,27 +368,24 @@ class UsersView(BaseView):
         # format data for response
         data = []
         for user in page_data:
-            # print('user: ',user.type != 0)
             infoData = models.User.objects.filter(user__id=user.id).first()
-            # print('infoData: ', infoData)
             if infoData.movie != None:
-                if user.type != 0:
-                    data.append({
-                        'id': user.id,
-                        'numCoins': infoData.num_coins,
-                        'numFollowers': infoData.num_followers,
-                        'username': infoData.user.username,
-                        'email': user.email,
-                        'gender': user.gender,
-                        'age': user.age,
-                        'movie_name': infoData.movie.movie_name,
-                        'release_time': infoData.movie.release_time,
-                        'movie_intro': infoData.movie.movie_intro,
-                        'movieId': infoData.movie.id,
-                        'genre': infoData.movie.genre,
-                        'producer': infoData.movie.producer,
-                        'isReview': True
-                    })
+                data.append({
+                    'id': user.id,
+                    'numCoins': infoData.num_coins,
+                    'numFollowers': infoData.num_followers,
+                    'username': infoData.user.username,
+                    'email': user.email,
+                    'gender': user.gender,
+                    'age': user.age,
+                    'movie_name': infoData.movie.movie_name,
+                    'release_time': infoData.movie.release_time,
+                    'movie_intro': infoData.movie.movie_intro,
+                    'movieId': infoData.movie.id,
+                    'genre': infoData.movie.genre,
+                    'producer': infoData.movie.producer,
+                    'isReview': True
+                })
 
             # response_data = 
 
@@ -575,6 +573,8 @@ class MoviesView(BaseView):
             return MoviesView.searchInfo(request)
         elif module == 'newest':
             return MoviesView.newestInfo(request)
+        elif module == 'keywords':
+            return MoviesView.searchByContainsWords(request)
         else:
             return BaseView.error()
 
@@ -661,6 +661,29 @@ class MoviesView(BaseView):
     '''
     search movies' info according to genre
     '''
+
+    def searchByContainsWords(request):
+        contain = request.GET.get('contain')
+        movies = models.Movies.objects.filter(movie_name__icontains=contain)
+        data = []
+        for movie in movies:
+            temp = {
+                'id': movie.id,
+                'movie_name': movie.movie_name,
+                'movie_intro': movie.movie_intro,
+                'release_time': movie.release_time,
+                'genre': movie.genre,
+                'producer': movie.producer,
+                'status': movie.status,
+                'adminName': movie.admin.user.name,
+                'adminGender': movie.admin.user.gender,
+                'adminEmail': movie.admin.user.email,
+                'adminAge': movie.admin.user.age,
+                'adminIntro': movie.admin.intro,
+                'adminLoginTime': movie.admin.login_time
+            }
+            data.append(temp)
+        return BaseView.successData(data)
 
     def searchInfo(request):
         genre = request.GET.get('genre')
@@ -756,6 +779,8 @@ class ReviewLogsView(BaseView):
     def get(self, request, module, *args, **kwargs):
         if module == 'page':
             return ReviewLogsView.getPageInfo(request)
+        elif module == 'display':
+            return ReviewLogsView.get_user_comments(request)
         else:
             return BaseView.error()
 
@@ -775,50 +800,6 @@ class ReviewLogsView(BaseView):
     View movie review records by pageination
     '''
 
-    # def getPageInfo(request):
-    #     loginUser = SystemView.getLoginUser(request.GET.get('token'))
-    #     loginUser = models.Users.objects.filter(id=cache.get('token')).first()
-    #     print(cache.get('token'))
-    #     pageIndex = request.GET.get('pageIndex', 1)
-    #     pageSize = request.GET.get('pageSize', 10)
-    #     username = request.GET.get('username')
-    #     movie_name = request.GET.get('movie_name')
-    #     query = Q()
-    #     if loginUser is not None and loginUser.type == 0:
-    #         query = query & Q(movie__admin__user__id=loginUser.id)
-    #     if loginUser is not None and loginUser.type == 1:
-    #         query = query & Q(user__user__id=loginUser.id)
-    #     if BaseView.isExist(username):
-    #         query = query & Q(user__user__name__contains=username)
-    #     if BaseView.isExist(movie_name):
-    #         movie = models.Movies.objects.filter(movie_name=movie_name).first()
-    #         query = query & Q(movie__id__contains=movie.id)
-    #         # print(movie.id)
-    #         # query = query & Q(movie__movie__name=movie_name)
-    #     # print(query)
-    #     data = models.ReviewLogs.objects.filter(query).order_by("-review_time")
-    #     paginator = Paginator(data, pageSize)
-    #     resl = []
-    #     for item in list(paginator.page(pageIndex)):
-    #         temp = {
-    #             'id': item.id,
-    #             'num_coins': item.user.num_coins,
-    #             'num_followers': item.user.num_followers,
-    #             'movieId': item.user.movie.id,
-    #             'movieName': item.user.movie.movie_name,
-    #             'adminName': item.user.user.name,
-    #             'adminIntro': item.movie.admin.intro,
-    #             'adminLoginTime': item.movie.admin.login_time,
-    #             'reviewTime': item.review_time,
-    #             'comments': item.comments,
-    #             'ratings': item.ratings
-    #         }
-    #         resl.append(temp)
-    #     pageData = BaseView.parsePage(int(pageIndex), int(pageSize),
-    #                                   paginator.page(pageIndex).paginator.num_pages,
-    #                                   paginator.count, resl)
-    #
-    #     return BaseView.successData(pageData)
     def getPageInfo(request):
         movie_name = request.GET.get('movie_name')
         if BaseView.isExist(movie_name):
@@ -886,7 +867,14 @@ class ReviewLogsView(BaseView):
         )
         return BaseView.success()
 
-
+    def get_user_comments(request):
+        user_comments = []
+        users = models.Users.objects.all()
+        for user in users:
+            comments = models.ReviewLogs.objects.filter(user=user.id).values('comments', 'review_time')
+            user_comments.append({'username': user.name, 'comments': list(comments)})
+        user_comments_json = json.dumps(user_comments)
+        return BaseView.successData(user_comments_json)
 
 class AvatarView(BaseView):
     # def post(self, request, *args, **kwargs):
