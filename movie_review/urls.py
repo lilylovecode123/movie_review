@@ -19,12 +19,12 @@ from movie_review_app import views
 from django.conf import settings
 from django.conf.urls.static import static
 urlpatterns = [
-    path('<str:module>/', views.SystemView.as_view()),
+    path('api/<str:module>/', views.SystemView.as_view()),
     path('upload/<str:module>/', views.AvatarView.as_view()),
-    path('users/<str:module>/', views.UsersView.as_view()),
-    path('admins/<str:module>/', views.AdminsView.as_view()),
-    path('movies/<str:module>/', views.MoviesView.as_view()),
-    path('reviewlogs/<str:module>/', views.ReviewLogsView.as_view()),
+    path('api/users/<str:module>/', views.UsersView.as_view()),
+    path('api/admins/<str:module>/', views.AdminsView.as_view()),
+    path('api/movies/<str:module>/', views.MoviesView.as_view()),
+    path('api/reviewlogs/<str:module>/', views.ReviewLogsView.as_view()),
     # path('favoriatelists/<str:module>/', views.FavoriateListsView.as_view()),
 
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

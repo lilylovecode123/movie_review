@@ -366,24 +366,27 @@ class UsersView(BaseView):
         # format data for response
         data = []
         for user in page_data:
+            # print('user: ',user.type != 0)
             infoData = models.User.objects.filter(user__id=user.id).first()
+            # print('infoData: ', infoData)
             if infoData.movie != None:
-                data.append({
-                    'id': user.id,
-                    'numCoins': infoData.num_coins,
-                    'numFollowers': infoData.num_followers,
-                    'username': infoData.user.username,
-                    'email': user.email,
-                    'gender': user.gender,
-                    'age': user.age,
-                    'movie_name': infoData.movie.movie_name,
-                    'release_time': infoData.movie.release_time,
-                    'movie_intro': infoData.movie.movie_intro,
-                    'movieId': infoData.movie.id,
-                    'genre': infoData.movie.genre,
-                    'producer': infoData.movie.producer,
-                    'isReview': True
-                })
+                if user.type != 0:
+                    data.append({
+                        'id': user.id,
+                        'numCoins': infoData.num_coins,
+                        'numFollowers': infoData.num_followers,
+                        'username': infoData.user.username,
+                        'email': user.email,
+                        'gender': user.gender,
+                        'age': user.age,
+                        'movie_name': infoData.movie.movie_name,
+                        'release_time': infoData.movie.release_time,
+                        'movie_intro': infoData.movie.movie_intro,
+                        'movieId': infoData.movie.id,
+                        'genre': infoData.movie.genre,
+                        'producer': infoData.movie.producer,
+                        'isReview': True
+                    })
 
             # response_data =
 
