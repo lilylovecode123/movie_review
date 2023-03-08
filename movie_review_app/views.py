@@ -875,6 +875,7 @@ class ReviewLogsView(BaseView):
             user = models.Users.objects.filter(user=comment.user_id).first()
             movie = models.Movies.objects.filter(id=comment.movie_id).first()
             temp = {
+                'id':comment.id,
                 'username': user.username,
                 'comment': comment.comments,
                 'time': comment.review_time,
