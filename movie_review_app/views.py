@@ -885,6 +885,14 @@ class ReviewLogsView(BaseView):
 
         return BaseView.successData({'data':user_comments})
 
+    def deleteInfo(request):
+        # print('id: ', request.POST.get('id'))
+        # review = models.ReviewLogs.objects.filter(id=request.POST.get('id')).first()
+        # print(review)
+        models.ReviewLogs.objects.filter(id=request.POST.get('id')).delete();
+        return BaseView.success()
+
+
 class AvatarView(BaseView):
     # def post(self, request, *args, **kwargs):
     def post(self, request, module, *args, **kwargs):
