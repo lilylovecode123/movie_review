@@ -714,7 +714,7 @@ class MoviesView(BaseView):
     def newestInfo(request):
         params = request.GET.get('params')
         if params == 'release_time':
-            movies = models.Movies.objects.all().order_by('-release_time')
+            movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-release_time')
         elif params == 'ratings':
             movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-avg_rating')
         else:
@@ -870,12 +870,19 @@ class ReviewLogsView(BaseView):
 
     def get_user_comments(request):
         user_comments = []
-        users = models.Users.objects.all()
-        for user in users:
-            comments = models.ReviewLogs.objects.filter(user=user.id).values('comments', 'review_time')
-            user_comments.append({'username': user.name, 'comments': list(comments)})
-        user_comments_json = json.dumps(user_comments)
-        return BaseView.successData(user_comments_json)
+        comments = models.ReviewLogs.objects.all()
+        for comment in comments:
+            user = models.Users.objects.filter(user=comment.user_id).first()
+            movie = models.Movies.objects.filter(id=comment.movie_id).first()
+            temp = {
+                'username': user.username,
+                'comment': comment.comments,
+                'time': comment.review_time,
+                'movie_name': movie.movie_name
+            }
+            user_comments.append(temp)
+
+        return BaseView.successData({'data':user_comments})
 
 class AvatarView(BaseView):
     # def post(self, request, *args, **kwargs):
