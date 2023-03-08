@@ -109,7 +109,7 @@ class SystemView(BaseView):
     '''
 
     def getStatisticInfo(request):
-        loginUser = SystemView.getUserLogin(request.GET.get('token'))
+        loginUser = SystemView.getLoginUser(request.GET.get('token'))
         resl = {}
         # 此处假设管理员管理电影/用户/管理员的所有信息
         if loginUser['type'] == 0:
@@ -231,7 +231,7 @@ class SystemView(BaseView):
     '''
 
     def getSessionInfo(request):
-        loginUser = SystemView.getUserLogin(request.GET.get('token'))
+        loginUser = SystemView.getLoginUser(request.GET.get('token'))
         return BaseView.successData(loginUser)
 
     '''
