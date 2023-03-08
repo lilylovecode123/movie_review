@@ -734,7 +734,8 @@ class MoviesView(BaseView):
                 'adminEmail': movie.admin.user.email,
                 'adminAge': movie.admin.user.age,
                 'adminIntro': movie.admin.intro,
-                'adminLoginTime': movie.admin.login_time
+                'adminLoginTime': movie.admin.login_time,
+                'avg_rating': movie.avg_rating
             }
             if params == 'avg_rating':
                 temp['avg_rating'] = movie.avg_rating
@@ -801,9 +802,9 @@ class ReviewLogsView(BaseView):
     '''
 
     def getPageInfo(request):
-        movie_name = request.GET.get('movie_name')
-        if BaseView.isExist(movie_name):
-            movie = models.Movies.objects.filter(movie_name=movie_name).first()
+        id = request.GET.get('id')
+        if BaseView.isExist(id):
+            movie = models.Movies.objects.filter(id=id).first()
             if movie is not None:
                 data = models.ReviewLogs.objects.filter(movie_id=movie.id).order_by('-review_time')
                 avg_ratings = data.aggregate(Avg('ratings'))['ratings__avg']
