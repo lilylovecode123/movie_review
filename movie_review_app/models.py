@@ -1,6 +1,4 @@
 from django.db import models
-
-
 # users' account infomation (admin/ordinary user also are inherit those users' information)
 class Users(models.Model):
     id = models.AutoField(primary_key=True)
@@ -30,11 +28,11 @@ class Admins(models.Model):
 # movies' information
 class Movies(models.Model):
     id = models.AutoField(primary_key=True)
-    movie_name = models.CharField(max_length=256, null=False)
-    movie_intro = models.CharField(max_length=256, null=False)
+    movie_name = models.CharField(max_length=512, null=False)
+    movie_intro = models.CharField(max_length=1024, null=False)
     release_time = models.CharField(max_length=20, db_column='release_time', null=False)
     genre = models.CharField(max_length=64, null=False)
-    producer = models.CharField(max_length=128, null=False)
+    producer = models.CharField(max_length=512, null=False)
     status = models.BooleanField(default=True, null=False)
     admin = models.ForeignKey(Admins, on_delete=models.CASCADE, db_column='admin_id', default='1')
     image = models.TextField(max_length=255, null=True, default='media/christopher-campbell-rDEOVtE7vOs-unsplash.jpg')
