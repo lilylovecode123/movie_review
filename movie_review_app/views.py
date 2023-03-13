@@ -573,7 +573,7 @@ class MoviesView(BaseView):
             return MoviesView.searchInfo(request)
         elif module == 'newest':
             return MoviesView.newestInfo(request)
-        elif module == 'keywords':
+        elif module == 'contain':
             return MoviesView.searchByContainsWords(request)
         else:
             return BaseView.error()
@@ -664,6 +664,7 @@ class MoviesView(BaseView):
 
     def searchByContainsWords(request):
         contain = request.GET.get('contain')
+        print(contain)
         movies = models.Movies.objects.filter(movie_name__icontains=contain)
         data = []
         for movie in movies:
@@ -713,12 +714,28 @@ class MoviesView(BaseView):
     '''
     def newestInfo(request):
         params = request.GET.get('params')
-        if params == 'release_time':
+        if params == 'release':
             movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-release_time')
+            params = 'all'
         elif params == 'ratings':
             movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-avg_rating')
+            params = 'all'
+        elif params == '':
+            movies = models.Movies.objects.annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-avg_rating')
+            params = 'homepage'
         else:
-            return BaseView.error("Invalid params.")
+            if len(params) > 11:
+                params_genre = params[:-7]
+                # print(params_genre)
+                params_sort = params[-7:]
+                if params_sort == 'release':
+                    movies = models.Movies.objects.filter(genre=params_genre).annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-release_time')
+                else:
+                    movies = models.Movies.objects.filter(genre=params_genre).annotate(avg_rating=Avg('reviewlogs__ratings')).order_by('-avg_rating')
+            else:
+                movies = models.Movies.objects.filter(genre = params).annotate(avg_rating=Avg('reviewlogs__ratings'))
+            params = 'genre'
+            # return BaseView.error("Invalid params.")
         resl = []
         for movie in movies:
             temp = {
@@ -735,10 +752,13 @@ class MoviesView(BaseView):
                 'adminAge': movie.admin.user.age,
                 'adminIntro': movie.admin.intro,
                 'adminLoginTime': movie.admin.login_time,
-                'avg_rating': movie.avg_rating
+                'avg_rating': movie.avg_rating,
+                'page':params,
             }
-            if params == 'avg_rating':
-                temp['avg_rating'] = movie.avg_rating
+            if params == '':
+                temp['page'] = 'homepage'
+            # if params == 'avg_rating':
+            #     temp['avg_rating'] = movie.avg_rating
             resl.append(temp)
         return BaseView.successData(resl)
 
