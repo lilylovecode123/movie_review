@@ -931,4 +931,3 @@ class AvatarView(BaseView):
         # print(avatar.name)
         return BaseView.successData({'file_url':file_url})
         # file_serializer = FileSerializer(data = request.data)
-       
