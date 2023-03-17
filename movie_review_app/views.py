@@ -160,7 +160,6 @@ class SystemView(BaseView):
                 resl = {
                     'token': str(token),
                     'id': user.id,
-
                 }
 
                 cache.set('token', user.id, 60 * 60 * 60 * 3)
