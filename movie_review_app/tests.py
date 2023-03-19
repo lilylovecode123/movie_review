@@ -5,7 +5,8 @@ from django.test import TestCase
 from django.urls import reverse
 from django.db import models
 
-from movie_review.movie_review_app.models import User
+from movie_review import movie_review
+from movie_review.movie_review_app.models import *
 
 
 # Define a test case for the login function
@@ -49,6 +50,7 @@ class LoginTestCase(TestCase):
         # Check that the response contains an error message
         self.assertIn('User inputs a wrong password.', response.json()['error'])
 
+# Define a test case for the checkPassword function
 class CheckPasswordViewTestCase(TestCase):
     def setUp(self):
         self.client = Client()
@@ -84,3 +86,61 @@ class CheckPasswordViewTestCase(TestCase):
         # Check that the response is a warning response
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {'status': 'warning', 'message': 'User inputs wrong original password.'})
+
+# Define a test case for the searchByContainsWords function
+class MovieSearchTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_search_by_contains_words(self):
+        # Create a test Movie object
+        test_movie = models.Movies.objects.create(
+            movie_name='The Avengers',
+            movie_intro='A team of superheroes fight to save the world.',
+            release_time='2012-05-04',
+            genre='Action, Adventure, Sci-Fi',
+            producer='Marvel Studios',
+            status='Released'
+        )
+
+        # Create a test User object to associate with the Movie's admin
+        test_user = User.objects.create(
+            username='test_user',
+            email='test_user@example.com',
+            password='password123',
+            name='Test User',
+            gender='Male',
+            age=30,
+            intro='I love movies!'
+        )
+
+        # Associate the test User with the Movie's admin
+        test_admin = models.Admin.objects.create(
+            user=test_user,
+            login_time='2022-03-19 12:00:00'
+        )
+        test_movie.admin = test_admin
+        test_movie.save()
+
+        # Send a GET request to the view with the query parameter 'contain'
+        request = self.factory.get('/search/', {'contain': 'Avengers'})
+        response = movie_review.movie_review_app.views.MoviesView(request)
+
+        # Check that the response contains the expected movie data
+        expected_data = [{
+            'id': test_movie.id,
+            'movie_name': 'The Avengers',
+            'movie_intro': 'A team of superheroes fight to save the world.',
+            'release_time': '2012-05-04',
+            'genre': 'Action, Adventure, Sci-Fi',
+            'producer': 'Marvel Studios',
+            'status': 'Released',
+            'adminName': 'Test User',
+            'adminGender': 'Male',
+            'adminEmail': 'test_user@example.com',
+            'adminAge': 30,
+            'adminIntro': 'I love movies!',
+            'adminLoginTime': '2022-03-19 12:00:00'
+        }]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data, expected_data)
