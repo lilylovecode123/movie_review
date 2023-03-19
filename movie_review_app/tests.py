@@ -1,12 +1,12 @@
 from multiprocessing.connection import Client
 
 # Create your tests here.
-from django.test import TestCase
+from django.test import TestCase,RequestFactory
 from django.urls import reverse
 from django.db import models
 
 from movie_review import movie_review
-from movie_review.movie_review_app.models import *
+from movie_review.movie_review_app.views import *
 
 
 # Define a test case for the login function
@@ -144,3 +144,44 @@ class MovieSearchTestCase(TestCase):
         }]
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data, expected_data)
+
+# Define a test case for the get_user_comments function
+class UserCommentsTestCase(TestCase):
+    def setUp(self):
+        self.client = Client()
+
+    def test_get_user_comments(self):
+        # Create a test User object
+        test_user = Users.objects.create(
+            name='Test User',
+            email='test_user@example.com',
+            age=30
+        )
+
+        # Create some test ReviewLogs objects associated with the User
+        test_review_log_1 = ReviewLogs.objects.create(
+            user=test_user,
+            comments='This movie was great!',
+            review_time='2022-03-19 12:00:00'
+        )
+        test_review_log_2 = ReviewLogs.objects.create(
+            user=test_user,
+            comments='This movie was terrible!',
+            review_time='2022-03-20 12:00:00'
+        )
+
+        # Send a GET request to the view using the test client
+        response = self.client.get('/user-comments/')
+
+        # Check that the response contains the expected data
+        expected_data = [
+            {
+                'username': 'Test User',
+                'comments': [
+                    {'comments': 'This movie was great!', 'review_time': '2022-03-19 12:00:00'},
+                    {'comments': 'This movie was terrible!', 'review_time': '2022-03-20 12:00:00'}
+                ]
+            }
+        ]
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), expected_data)
