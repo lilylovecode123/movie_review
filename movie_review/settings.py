@@ -132,10 +132,10 @@ WSGI_APPLICATION = 'movie_review.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql', #conencted with mysql
-        'NAME': 'movie_review_web', #database name
-        'USER': 'root',
-        'PASSWORD': 'xch8886',
-        'HOST': '127.0.0.1', #localhost
+        'NAME': 'MovieReview053$movie_review_web', #数据库名字
+        'USER': 'MovieReview053',
+        'PASSWORD': 'xch8886123',
+        'HOST': 'MovieReview053.mysql.pythonanywhere-services.com',
         'PORT': 3306,
     }
 }
@@ -176,7 +176,7 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/3.2/howto/static-files/
-
+#
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
